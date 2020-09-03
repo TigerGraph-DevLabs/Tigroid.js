@@ -546,7 +546,7 @@ class Tigroid {
         }
         let vids = [];
         if (typeof vertexIds === "string" || typeof vertexIds === "number") {
-            vids.append(vertexIds);
+            vids.push(vertexIds);
         } else if (! Array.isArray(vertexIds)) {
             return null;
         } else {
@@ -1071,6 +1071,135 @@ class Tigroid {
         return this._post({url: this.gsUrl + "/gsqlserver/interpreted_query", data: queryText, params: params, authMode: "pwd"});
     }
 
+    /**
+     * Parses query output and separates vertex and edge data (and optionally other output) for easier use.
+     * 
+     * @param {object} output - The data structure returned by `runInstalledQuery()` or `runInterpretedQuery()`
+     * @param {boolean} graphOnly` - Should output be restricted to vertices and edges (True, default) or should any other output (e.g. values of
+     *                 variables or accumulators, or plain text printed) be captured as well.
+     * 
+     * @returns An object with two (or three) keys: "Vertices", "Edges" and optionally "Output". First two refer to another object
+     *      containing keys for each vertex and edge types found, and the instances of those vertex and edge types. "Output" is a list of
+     *      objects containing the key/value pairs of any other output.
+     * 
+     * The JSON output from a query can contain a mixture of results: vertex sets (the output of a SELECT statement),
+     *      edge sets (e.g. collected in a global accumulator), printout of global and local variables and accumulators,
+     *      including complex types (LIST, MAP, etc.). The type of the various output entries is not explicit, we need
+     *      to inspect the content to find out what it actually is.
+     *  This function "cleans" this output, separating, collecting and collating vertices and edges in an easy to access way.
+     *      It can also collect other generic output or ignore it.
+     *  The output of this function can be used e.g. with the `vertexSetToDataFrame()` and `edgeSetToDataFrame()` functions or
+     *      (after some transformation) to pass a subgraph to a visualisation component.
+     */
+    parseQueryOutput(output, graphOnly=True) {
+    	
+    	function attCopy(src, trg) {
+    		let srca = src["attributes"];
+    		let trga = trg["attributes"];
+    		for (let att in srca) {
+    			trga[att] = srca[att];
+    		};
+    	}
+
+    	function addOccurrences(obj, src) {
+    		if (obj.hasOwnProperty("x_occurrences")) {
+    			obj["x_occurrences"] = obj["x_occurrences"] + 1;
+    		} else {
+    			obj["x_occurrences"] = 1;
+    		}
+    		if (obj.hasOwnProperty("x_sources")) {
+    			obj["x_sources"].push(src);
+    		} else {
+    			obj["x_sources"] = [src];
+    		}
+    	}
+    	
+        let vs = {};
+        let es = {};
+        let ou = [];
+        
+        // Outermost data type is an array
+        for (let o1 in output) {
+        	let _o1 = output[o1];
+            // Next level data type is an object with one or more properties that could be vertex sets, edge sets or generic output (of simple or complex data types)
+            for (let o2 in _o1) {
+            	let _o2 = _o1[o2];
+            	if (Array.isArray(_o2)) { // Is it an array?
+            		// Sample first element
+                	let sample = _o2[0];
+                	if (sample.hasOwnProperty("v_type")) { // It's a vertex!
+                		let vType = sample["v_type"];
+                		let vtm;
+                		if (vs.hasOwnProperty(vType)) { // Do we have this type of vertices in our list (which is an object, really)?
+                			// Yes, get it (a Map)
+                			vtm = vs[vType];
+                		} else {
+                			// No, let's create a Map for them and add to the list
+                			vtm = new Map();
+                			vs[vType] = vtm;
+                		}
+    	            	for(let o3 in _o2) { // Iterate through the vertex set
+    	            		let _o3 = _o2[o3];
+    	                	let vId = _o3["v_id"];
+    	                	if (vtm.has(vId)) { // Do we have this specific vertex (identified by the ID) in our list?
+    	                		// Yes, update it
+    	                		let tmp = vtm.get(vId);
+    	                		attCopy(_o3, tmp);
+    	                		addOccurrences(tmp, o2);
+    	                	} else {
+    	                		// No, add it
+    	                		addOccurrences(_o3, o2);
+    	                		vtm.set(vId, _o3);
+    	                	}
+    	            	}
+                	} else if (sample.hasOwnProperty("e_type")) { // It's an edge!
+                		let eType = sample["e_type"];
+                		let etm;
+                		if (es.hasOwnProperty(eType)) { // Do we have this type of edges in our list (which is an object, really)?
+                			// Yes, get it (a Map)
+                			etm = es[eType];
+                		} else {
+                			// No, let's create a Map for them and add to the list
+                			etm = new Map();
+                			es[eType] = etm;
+                		}
+    	            	for(let o3 in _o2) { // Iterate through the edge set
+    	            		let _o3 = _o2[o3];
+    	                	let eId = _o3["from_type"] + "[" + _o3["from_id"] + "]->" + _o3["to_type"] + "[" + _o3["to_id"] + "]";
+    	                	_o3["e_id"] = eId;
+    	                	if (etm.has(eId)) { // Do we have this specific edge (identified by the composite ID) in our list?
+    	                		let tmp = etm.get(eId);
+    	                		attCopy(_o3, tmp);
+    	                		addOccurrences(tmp, o2);
+    	                	} else {
+    	                		// No, add it
+    	                		addOccurrences(_o3, o2);
+    	                		etm.set(eId, _o3);
+    	                	}
+    	            	}
+                	} else { // It's a ... something else.
+                    	ou.push({"label": o2, "value": _o2});
+                	}
+            	} else { // It's a ... something else.
+                	ou.push({"label": o2, "value": _o2});
+            	}
+            }
+        }
+        // Converting maps to arrays
+        for (let vm in vs) {
+        	vs[vm] = Array.from(vs[vm].values());
+        }
+        for (let em in es) {
+        	es[em] = Array.from(es[em].values());
+        }
+        // Putting all together
+        let ret = {"Vertices": vs, "Edges": es};
+        if (! graphOnly) {
+            ret["Output"] = ou;
+        }
+        return ret;
+    }
+    
     // Token management =========================================================
 
     getToken(secret, setToken = true, lifetime = null) {
