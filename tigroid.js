@@ -319,20 +319,6 @@ class Tigroid {
         return this._post({url: this.restppUrl + "/graph/" + this.graphname, data: data})[0]["accepted_vertices"];
     }
 
-    _simplifyVertex(vertex) {
-        if (! vertex) {
-            return {};
-        }
-        let as = {};
-        as["v_id"] = vertex["v_id"];
-        for (let a in vertex["attributes"]){
-            as[a] = vertex["attributes"][a];
-        }
-        let v = {};
-        v[vertex["v_id"]] = as;
-        return v;
-    }
-
     /**
      * Retrieves vertices of the given vertex type.
      * 
@@ -381,20 +367,6 @@ class Tigroid {
         return this._get({url: url});
     }
 
-    /**
-     * Retrieves vertices of the given vertex type in a simplified format.
-     * 
-     * For parameter and return details see {@link getVertices}
-     */ 
-    getVs(vertexType, select = "", where = "", limit = "", sort = "", timeout = 0) {
-        let res = this.getVertices(vertexType, select, where, limit, sort, timeout);
-        let ret = [];
-        for (let i = 0; i < res.length; i++) {
-            ret.push(this._simplifyVertex(res[i]));
-        }
-        return ret;
-    }
-
     /** 
      * Retrieves vertices of the given vertex type, identified by their ID.
      * 
@@ -421,20 +393,6 @@ class Tigroid {
         let ret = [];
         for (let vid in vids) {
             ret.push(this._get({url: url + vids[vid].toString()})[0]);
-        }
-        return ret;
-    }
-
-    /**
-     * Retrieves vertices of the given vertex type, identified by their ID, in a simplified format.
-     * 
-     * For parameter and return details see {@link getVerticesById}
-     */
-    getVsById(vertexType, vertexIds) {
-        let res = this.getVerticesById(vertexType, vertexIds);
-        let ret = [];
-        for (let i = 0; i < res.length; i++) {
-            ret.push(this._simplifyVertex(res[i]));
         }
         return ret;
     }
@@ -898,7 +856,17 @@ class Tigroid {
         if (timeout && timeout > 0) {
             url += (isFirst ? "?" : "&") + "timeout=" + timeout.toString();
         }
-        return this._get({url: url});
+        ret = this._get({url: url});
+
+        // Add reverse edge name where applicable 
+        let rev = this.getReverseEdge(ret[0]["e_type"]);
+        if (rev) {
+        	for (let e in ret) {
+        		ret[e]["reverse_edge"] = rev;
+        	}
+        }
+
+        return ret;
     }
 
     /**
@@ -954,7 +922,17 @@ class Tigroid {
                 .replace('$edgeType', edgeType);
             ret = this.runInterpretedQuery(queryText)
         }
-        return ret[0]["edges"]
+        ret = ret[0]["edges"];
+
+        // Add reverse edge name where applicable 
+        let rev = this.getReverseEdge(ret[0]["e_type"]);
+        if (rev) {
+        	for (let e in ret) {
+        		ret[e]["reverse_edge"] = rev;
+        	}
+        }
+
+        return ret;
     }
 
     /**
@@ -1091,7 +1069,7 @@ class Tigroid {
      *  The output of this function can be used e.g. with the `vertexSetToDataFrame()` and `edgeSetToDataFrame()` functions or
      *      (after some transformation) to pass a subgraph to a visualisation component.
      */
-    parseQueryOutput(output, graphOnly=True) {
+    parseQueryOutput(output, graphOnly=true) {
     	
     	function attCopy(src, trg) {
     		let srca = src["attributes"];
@@ -1125,48 +1103,60 @@ class Tigroid {
             for (let o2 in _o1) {
             	let _o2 = _o1[o2];
             	if (Array.isArray(_o2)) { // Is it an array?
-            		// Sample first element
-                	let sample = _o2[0];
-                	if (sample.hasOwnProperty("v_type")) { // It's a vertex!
-                		let vType = sample["v_type"];
-                		let vtm;
-                		if (vs.hasOwnProperty(vType)) { // Do we have this type of vertices in our list (which is an object, really)?
-                			// Yes, get it (a Map)
-                			vtm = vs[vType];
-                		} else {
-                			// No, let's create a Map for them and add to the list
-                			vtm = new Map();
-                			vs[vType] = vtm;
-                		}
-    	            	for(let o3 in _o2) { // Iterate through the vertex set
-    	            		let _o3 = _o2[o3];
-    	                	let vId = _o3["v_id"];
-    	                	if (vtm.has(vId)) { // Do we have this specific vertex (identified by the ID) in our list?
-    	                		// Yes, update it
-    	                		let tmp = vtm.get(vId);
-    	                		attCopy(_o3, tmp);
-    	                		addOccurrences(tmp, o2);
-    	                	} else {
-    	                		// No, add it
-    	                		addOccurrences(_o3, o2);
-    	                		vtm.set(vId, _o3);
-    	                	}
-    	            	}
-                	} else if (sample.hasOwnProperty("e_type")) { // It's an edge!
-                		let eType = sample["e_type"];
-                		let etm;
-                		if (es.hasOwnProperty(eType)) { // Do we have this type of edges in our list (which is an object, really)?
-                			// Yes, get it (a Map)
-                			etm = es[eType];
-                		} else {
-                			// No, let's create a Map for them and add to the list
-                			etm = new Map();
-                			es[eType] = etm;
-                		}
-    	            	for(let o3 in _o2) { // Iterate through the edge set
-    	            		let _o3 = _o2[o3];
-    	                	let eId = _o3["from_type"] + "[" + _o3["from_id"] + "]->" + _o3["to_type"] + "[" + _o3["to_id"] + "]";
+	            	for(let o3 in _o2) { // Iterate through the array
+	            		let _o3 = _o2[o3];
+	            		if (_o3.hasOwnProperty("v_type")) { // It's a vertex!
+	            			
+	            			// Handle vertex type first
+	                		let vType = _o3["v_type"];
+	                		let vtm;
+	                		if (vs.hasOwnProperty(vType)) { // Do we have this type of vertices in our list (which is an object, really)?
+	                			// Yes, get it (a Map)
+	                			vtm = vs[vType];
+	                		} else {
+	                			// No, let's create a Map for them and add to the list
+	                			vtm = new Map();
+	                			vs[vType] = vtm;
+	                		}
+
+	                		// Then handle the vertex itself
+		                	let vId = _o3["v_id"];
+		                	if (vtm.has(vId)) { // Do we have this specific vertex (identified by the ID) in our list?
+		                		// Yes, update it
+		                		let tmp = vtm.get(vId);
+		                		attCopy(_o3, tmp);
+		                		addOccurrences(tmp, o2);
+		                	} else {
+		                		// No, add it
+		                		addOccurrences(_o3, o2);
+		                		vtm.set(vId, _o3);
+		                	}
+		                	
+	            		} else if (_o3.hasOwnProperty("e_type")) { // It's an edge!
+	            			
+	            			// Handle vertex type first
+	                		let eType = _o3["e_type"];
+	                		let etm;
+	                		if (es.hasOwnProperty(eType)) { // Do we have this type of edges in our list (which is an object, really)?
+	                			// Yes, get it (a Map)
+	                			etm = es[eType];
+	                		} else {
+	                			// No, let's create a Map for them and add to the list
+	                			etm = new Map();
+	                			es[eType] = etm;
+	                		}
+	                		
+	                		// Then handle the edge itself
+    	                	let eId = _o3["from_type"] + "(" + _o3["from_id"] + ")->" + _o3["to_type"] + "(" + _o3["to_id"] + ")";
     	                	_o3["e_id"] = eId;
+    	                	
+    	                	// Add reverse edge name, if applicable
+    	                	if (this.isDirected(eType)) {
+    	                		let rev = this.getReverseEdge(eType);
+    	                		if (rev) {
+    	                			_o3["reverse_edge"] = rev;
+    	                		}
+    	                	}
     	                	if (etm.has(eId)) { // Do we have this specific edge (identified by the composite ID) in our list?
     	                		let tmp = etm.get(eId);
     	                		attCopy(_o3, tmp);
@@ -1176,10 +1166,11 @@ class Tigroid {
     	                		addOccurrences(_o3, o2);
     	                		etm.set(eId, _o3);
     	                	}
-    	            	}
-                	} else { // It's a ... something else.
-                    	ou.push({"label": o2, "value": _o2});
-                	}
+
+	            		} else { // It's a ... something else
+	                    	ou.push({"label": o2, "value": _o2});
+	            		}
+	            	}
             	} else { // It's a ... something else.
                 	ou.push({"label": o2, "value": _o2});
             	}
