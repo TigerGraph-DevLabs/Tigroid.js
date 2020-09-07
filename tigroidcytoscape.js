@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 
 class TigroidCytoscape {
@@ -7,14 +7,14 @@ class TigroidCytoscape {
 	makeVertexId(vType, vId) {
 		return vType + "(" + vId + ")";
 	}
-	
+
 	// Vertex functions --------------------------------------------------------
-	
+
 	isValidVertex(vertex) {
 		return vertex.hasOwnProperty("v_type") && vertex.hasOwnProperty("v_id") &&
 			vertex.hasOwnProperty("attributes");
 	}
-	
+
 	convertVertex(vertex) {
 		if (! this.isValidVertex(vertex)) {
 			return null;
@@ -33,33 +33,33 @@ class TigroidCytoscape {
 		}
 		return ret;
 	}
-	
+
 	addVertex(vertex) {
 		if (! this.isValidVertex(vertex)) {
 			return null;
 		}
 		this.cy.add({group: "nodes", data: this.convertVertex(vertex)});
 	}
-	
+
 	addVertexSet(vertexSet) {
 		for (let v in vertexSet) {
 			this.addVertex(vertexSet[v]);
 		}
 	}
-	
+
 	addVertices(vertices) {
 		this.addVertexSet(vertices);
 	}
-	
+
 	// Edge functions ----------------------------------------------------------
-	
+
 	isValidEdge(edge) {
 		return edge.hasOwnProperty("e_type") &&
 			edge.hasOwnProperty("from_type") && edge.hasOwnProperty("from_id") &&
 			edge.hasOwnProperty("to_type")   && edge.hasOwnProperty("to_id") &&
 			edge.hasOwnProperty("attributes");
 	}
-	
+
 	convertEdge(edge) {
 		if (! this.isValidEdge(edge)) {
 			return null;
@@ -77,7 +77,7 @@ class TigroidCytoscape {
 				to_id: edge["to_id"],
 				directed: edge["directed"].toString()
 		};
-		if (edge.hasOwnProperty("reverse_edge")) {
+		if (this.revEdge && edge.hasOwnProperty("reverse_edge")) {
 			ret["reverse_edge"] = edge["reverse_edge"];
 		}
 		Object.assign(ret, edge["attributes"]);
@@ -92,14 +92,14 @@ class TigroidCytoscape {
 			return null;
 		}
 		let e = this.convertEdge(edge);
-		
+
 		let src = this.cy.getElementById(e["source"])["_private"].hasOwnProperty("data");
 		let trg = this.cy.getElementById(e["target"])["_private"].hasOwnProperty("data");
 
-		if ((! src || ! trg) && this.strayEdge !== "fix") {
+		if ((! src || ! trg) && ! this.strayEdge) {
 			return;
 		}
-		
+
 		if (! src) {
 			src = {
 				v_id: e["from_id"],
@@ -109,7 +109,7 @@ class TigroidCytoscape {
 			}
 			this.addVertex(src);
 		}
-		
+
 		if (! trg) {
 			trg = {
 				v_id: e["to_id"],
@@ -119,22 +119,22 @@ class TigroidCytoscape {
 			}
 			this.addVertex(trg);
 		}
-		
+
 		this.cy.add({group: "edges", data: e});
 	}
-	
+
 	addEdgeSet(edgeSet) {
 		for (let e in edgeSet) {
 			this.addEdge(edgeSet[e]);
 		}
 	}
-	
+
 	addEdges(edges) {
 		this.addEdgeSet(edges);
 	}
-	
+
 	// Query functions ---------------------------------------------------------
-	
+
 	addQueryOutput(output) {
 		if (output.hasOwnProperty("Vertices")) {
 			let vs = output["Vertices"];
@@ -142,7 +142,7 @@ class TigroidCytoscape {
 				this.addVertexSet(vs[v]);
 			}
 		}
-		
+
 		if (output.hasOwnProperty("Edges")) {
 			let es = output["Edges"];
 			for (let e in es) {
@@ -150,12 +150,13 @@ class TigroidCytoscape {
 			}
 		}
 	}
-	
+
 	// -------------------------------------------------------------------------
-	
-	constructor ({cy, strayEdge = "fix", debug = false}) {
+
+	constructor ({cy, strayEdge = true, revEdge = false, debug = false}) {
 		this.cy = cy;
 		this.debug = debug;
 		this.strayEdge = strayEdge;
+		this.revEdge = revEdge;
 	}
 }

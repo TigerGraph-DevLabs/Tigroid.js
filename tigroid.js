@@ -12,10 +12,10 @@ class HttpError {
     }
 }
 
-/** 
+/**
  * JavaScript connector for TigerGraph
  * https://www.tigergraph.com
- * 
+ *
  * Common arguments used in methods:
  * vertexType, sourceVertexType, targetVertexType -- The name of a vertex type in the graph.
  *                                                   Use `getVertexTypes()` to fetch the list of vertex types currently in the graph.
@@ -29,7 +29,7 @@ class Tigroid {
 
 	/**
 	 * Checks if the JSON document returned by an endpoint has contains error: true; if so, it raises an exception
-	 * 
+	 *
 	 * @param {string} res - The response returned by the endpoint.
 	 */
     _errorCheck(res) {
@@ -40,7 +40,7 @@ class Tigroid {
 
     /**
      * Generic REST++ API request
-     * 
+     *
 	 * @param {string} method - HTTP method, currently one of GET, POST, DELETE or PUT.
 	 * @param {string} url - Complete REST++ API URL including path and parameters.
 	 * @param {string} authMode - Authentication mode, one of 'token' (default) or 'pwd'.
@@ -49,7 +49,7 @@ class Tigroid {
 	 * @param {string} resKey - the JSON subdocument to be returned, default is 'result'.
 	 * @param {boolean} skipCheck - Skip error checking? Some endpoints return error to indicate that the requested action is not applicable; a problem, but not really an error.
 	 * @param {string|Object} params - Request URL parameters.
-	 * 
+	 *
 	 * @returns {string} The relevant part of the endpoint response as selected by resKey.
      */
     _req({method = "GET", url = "", authMode= "token", headers = null, data = null, resKey = "results", skipCheck = false, params = null}) {
@@ -142,7 +142,7 @@ class Tigroid {
 
     /**
      * Generic GET method.
-     * 
+     *
      * For parameter and return details see {@link _req}.
      */
     _get({url, authMode = "token", headers = null, resKey = "results", skipCheck = false, params = null}) {
@@ -151,7 +151,7 @@ class Tigroid {
 
     /**
      * Generic POST method.
-     * 
+     *
      * For parameter and return details see {@link _req}.
      */
     _post({url, authMode= "token", headers = null, data = null, resKey = "results", skipCheck = false, params = null}) {
@@ -160,7 +160,7 @@ class Tigroid {
 
     /**
      * Generic DELETE method.
-     * 
+     *
      * For parameter and return details see {@link _req}.
      */
     _delete({url, authMode}) {
@@ -170,9 +170,9 @@ class Tigroid {
 
     /**
      * Transforms attributes (provided as an string or array of strings) into a hierarchy as expect by the upsert functions.
-     * 
+     *
      * @param {Object} attributes - Vertex or edge attributes.
-     * 
+     *
      * @returns {Object} Attributes in new structure.
      */
     _upsertAttrs(attributes) {
@@ -201,10 +201,10 @@ class Tigroid {
 
     /**
      * Retrieves all User Defined Types (UDTs) of the graph.
-     * 
+     *
      * Endpoint:      GET /gsqlserver/gsql/udtlist
      * Documentation: Not documented publicly
-     * 
+     *
      * @returns {string} The JSON document containing the UDT details (or empty string).
      */
     _getUDTs() {
@@ -321,7 +321,7 @@ class Tigroid {
 
     /**
      * Retrieves vertices of the given vertex type.
-     * 
+     *
      * @param {string} select - Comma separated list of vertex attributes to be retrieved or omitted.
      *                 See {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#select}
 	 * @param {string} where - Comma separated list of conditions that are all applied on each vertex' attributes.
@@ -335,7 +335,7 @@ class Tigroid {
      *                 Must be used with limit.
      *
      * @returns {string} A JSON document containing the vertex'/vertices' details.
-     * 
+     *
      * NOTE: The primary ID of a vertex instance is NOT an attribute, thus cannot be used in above arguments.
      *       Use `getVerticesById` if you need to retrieve by vertex ID.
      *
@@ -367,13 +367,13 @@ class Tigroid {
         return this._get({url: url});
     }
 
-    /** 
+    /**
      * Retrieves vertices of the given vertex type, identified by their ID.
-     * 
+     *
      * @param {string|string[]} vertexIds -  A single vertex ID or a list of vertex IDs.
-     * 
+     *
      * @returns {string} A JSON document containing the vertex'/vertices' details.
-     * 
+     *
      * Endpoint:      GET /graph/{graph_name}/vertices
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-graph-graph_name-vertices}
      */
@@ -400,12 +400,12 @@ class Tigroid {
     // TODO: getVertexNeighbors()
 
     /** Returns vertex attribute statistics.
-     * 
+     *
 	 * @param {string|string[]} vertexTypes - A single vertex type name or a list of vertex types names or '*' for all vertex types.
 	 * @param {boolean} skipNA - Skip those non-applicable vertices that do not have attributes or none of their attributes have statistics gathered.
-	 * 
+	 *
 	 * @returns: A JSON document of vertex startistics.
-	 * 
+	 *
 	 * Endpoint:      POST /builtins
 	 * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#stat_vertex_attr}
      */
@@ -444,7 +444,7 @@ class Tigroid {
 
     /**
      * Deletes vertices from graph.
-     * 
+     *
 	 * @param {string} where - Comma separated list of conditions that are all applied on each vertex' attributes.
      *                 The conditions are in logical conjunction (i.e. they are "AND'ed" together).
      *                 See {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#filter}
@@ -456,9 +456,9 @@ class Tigroid {
      *                 Must be used with limit.
 	 * @param {boolean} permanent - If true, the deleted vertex IDs can never be inserted back, unless the graph is dropped or the graph store is cleared.
 	 * @param {number} timeout - Time allowed for successful execution (0 = no limit, default).
-	 * 
+	 *
 	 * @returns {number} A single number of deleted vertices.
-	 * 
+	 *
 	 * NOTE: The primary ID of a vertex instance is NOT an attribute, thus cannot be used in above arguments.
 	 *                Use {@link delVerticesById} if you need to delete by vertex ID.
 	 * Endpoint:      DELETE /graph/{graph_name}/vertices
@@ -488,13 +488,13 @@ class Tigroid {
 
     /**
      * Deletes vertices from graph identified by their ID.
-     * 
+     *
 	 * @param {string|string[]} vertexIds - A single vertex ID or a list of vertex IDs.
 	 * @param {boolean} permanent - If true, the deleted vertex IDs can never be inserted back, unless the graph is dropped or the graph store is cleared.
 	 * @param {number} timeout - Time allowed for successful execution (0 = no limit, default).
-	 * 
+	 *
 	 * @returns {number} A single number of deleted vertices.
-	 * 
+	 *
 	 * Endpoint:      DELETE /graph/{graph_name}/vertices
 	 * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#delete-graph-graph_name-vertices}
      */
@@ -522,16 +522,16 @@ class Tigroid {
         for (let vid in vids) {
             ret += this._delete(url1 + str(vid) + url2)["deleted_vertices"];
         }
-        return ret;    	
+        return ret;
     }
 
     // Edge related functions ===================================================
 
     /**
      * Returns the list of edge type names of the graph.
-     * 
+     *
      * @param {boolean} force - If true, forces the retrieval the schema details again, otherwise returns a cached copy of edge type details (if they were already fetched previously).
-     * 
+     *
      * @returns {string[]} An array of edge type names.
      */
     getEdgeTypes(force = false) {
@@ -545,10 +545,10 @@ class Tigroid {
 
     /**
      * Returns the details of vertex type.
-     * 
+     *
 	 * @param {string} edgeType - The name of the edge type.
 	 * @param {boolean} force - If true, forces the retrieval the schema details again, otherwise returns a cached copy of edge type details (if they were already fetched previously).
-	 * 
+	 *
 	 * @returns {string} A JSON document describing the vertex type.
      */
     getEdgeType(edgeType, force = false) {
@@ -563,9 +563,9 @@ class Tigroid {
 
     /**
      * Returns the type(s) of the edge type's source vertex.
-     * 
+     *
 	 * @param {string} edgeType - The name of the edge type.
-     * 
+     *
      * @returns
      *  - A single source vertex type name string if the edge has a single source vertex type
      *  - "*" if the edge can originate from any vertex type (notation used in 2.6.1 and earlier versions)
@@ -578,12 +578,12 @@ class Tigroid {
      */
     getEdgeSourceVertexType(edgeType) {
         let edgeTypeDetails = this.getEdgeType(edgeType);
-        
+
         // Edge type with a single source vertex type
         if (edgeTypeDetails["FromVertexTypeName"] != "*") {
             return edgeTypeDetails["FromVertexTypeName"];
         }
-        
+
         // Edge type with multiple source vertex types
         if ("EdgePairs" in edgeTypeDetails) {
             // v3.0 and later notation
@@ -597,12 +597,12 @@ class Tigroid {
             return "*";
         }
     }
-        
+
     /**
      * Returns the type(s) of the edge type's target vertex.
-     * 
+     *
 	 * @param {string} edgeType - The name of the edge type.
-     * 
+     *
      * @returns
      *  - A single target vertex type name string if the edge has a single target vertex type
      *  - "*" if the edge can originate from any vertex type (notation used in 2.6.1 and earlier versions)
@@ -615,12 +615,12 @@ class Tigroid {
      */
     getEdgeTargetVertexType(edgeType) {
         let edgeTypeDetails = this.getEdgeType(edgeType);
-        
+
         // Edge type with a single target vertex type
         if (edgeTypeDetails["ToVertexTypeName"] != "*") {
             return edgeTypeDetails["ToVertexTypeName"];
         }
-        
+
         // Edge type with multiple target vertex types
         if ("EdgePairs" in edgeTypeDetails) {
             // v3.0 and later notation
@@ -637,9 +637,9 @@ class Tigroid {
 
     /**
      * Is the specified edge type directed?
-     * 
+     *
 	 * @param {string} edgeType - The name of the edge type.
-	 * 
+	 *
 	 * @returns {boolean}
      */
     isDirected(edgeType) {
@@ -648,9 +648,9 @@ class Tigroid {
 
     /**
      * Returns the name of the reverse edge of the specified edge type, if applicable.
-     * 
+     *
 	 * @param {string} edgeType - The name of the edge type.
-	 * 
+	 *
 	 * @returns {string} Reverse edge name
      */
     getReverseEdge(edgeType) {
@@ -666,13 +666,13 @@ class Tigroid {
 
     /**
      * Returns the number of edges from a specific vertex.
-     * 
+     *
      * @param {string} where - Comma separated list of conditions that are all applied on each edge's attributes.
      *                         The conditions are in logical conjunction (i.e. they are "AND'ed" together).
      *                         See {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#filter}
      *
      * @returns {object} Edge type / edge count pairs.
-     * 
+     *
      * Uses:
      * - If `edgeType` = "*": edge count of all edge types (no other arguments can be specified in this case).
      * - If `edgeType` is specified only: edge count of the given edge type.
@@ -680,14 +680,14 @@ class Tigroid {
      * - If `sourceVertexType`, `sourceVertexId` are specified: edge count of all edge types from the given vertex instance.
      * - If `sourceVertexType`, `sourceVertexId`, `edgeType` are specified: edge count of all edge types from the given vertex instance.
      * - If `sourceVertexType`, `sourceVertexId`, `edgeType`, `where` are specified: the edge count of the given edge type after filtered by `where` condition.
-     * 
+     *
      * If `targetVertexId` is specified, then `targetVertexType` must also be specified.
      * If `targetVertexType` is specified, then `edgeType` must also be specified.
-     * 
+     *
      * For valid values of `where` condition, see https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#filter
-     * 
+     *
      * Returns a dictionary of <edge_type>: <edge_count> pairs.
-     * 
+     *
      * Endpoint:      GET /graph/{graph_name}/edges
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-graph-graph_name-edges}
      * Endpoint:      POST /builtins
@@ -737,7 +737,7 @@ class Tigroid {
 
     /**
      * Returns the number of edges of an edge type.
-     * 
+     *
      * This is a simplified version of `getEdgeCountFrom`, to be used when the total number of edges of a given type is needed, regardless which vertex instance they are originated from.
      * See documentation of {@link getEdgeCountFrom} above for more details.
      */
@@ -748,24 +748,24 @@ class Tigroid {
     // TODO: upsertEdge()
     /**
      * Upserts an edge.
-     * 
+     *
      * Data is upserted:
      * - If edge is not yet present in graph, it will be created (see special case below).
      * - If it's already in the graph, it is updated with the values specified in the request.
-     * 
+     *
      * The `attributes` argument is expected to be a dictionary in this format:
      *     {<attribute_name>, <attribute_value>|(<attribute_name>, <operator>), …}
-     * 
+     *
      * Example:
      *     {"visits": (1482, "+"), "max_duration": (371, "max")}
-     * 
+     *
      * For valid values of <operator> see: https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data
-     * 
+     *
      * @returns A single number of accepted (successfully upserted) edges (0 or 1).
-     * 
+     *
      * Note: If operator is "vertex_must_exist" then edge will only be created if both vertex exists in graph.
      *       Otherwise missing vertices are created with the new edge.
-     * 
+     *
      * Endpoint:      POST /graph
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data}
      */
@@ -773,36 +773,36 @@ class Tigroid {
     // TODO: upsertEdges()
     /**
      * Upserts multiple edges (of the same type).
-     * 
+     *
      * See the description of {@link upsertEdge} for generic information.
-     * 
+     *
      * The `edges` argument is expected to be a list in of tuples in this format:
      * [
      *   (<source_vertex_id>, <target_vertex_id>, {<attribute_name>: <attribute_value>|(<attribute_name>, <operator>), …})
      *   ⋮
      * ]
-     * 
+     *
      * Example:
      *     [
      *       (17, "home_page", {"visits": (35, "+"), "max_duration": (93, "max")}),
      *       (42, "search", {"visits": (17, "+"), "max_duration": (41, "max")}),
      *     ]
-     * 
+     *
      * For valid values of <operator> see: https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data
-     * 
+     *
      * @returns A single number of accepted (successfully upserted) edges (0 or positive integer).
-     * 
+     *
      * Endpoint:      POST /graph
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data}
      */
 
     /**
      * Retrieves edges of the given edge type originating from a specific source vertex.
-     * 
+     *
      * Only `sourceVertexType` and `sourceVertexId` are required.
      * If `targetVertexId` is specified, then `targetVertexType` must also be specified.
      * If `targetVertexType` is specified, then `edgeType` must also be specified.
-     * 
+     *
      * Arguments:
      * @param {string} select - Comma separated list of vertex attributes to be retrieved or omitted.
      *                 See {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#select}
@@ -817,7 +817,7 @@ class Tigroid {
      *                 Must be used with limit.
      *
      * @returns {string} A JSON document containing the vertex'/vertices' details.
-     * 
+     *
      * Endpoint:      GET /graph/{graph_name}/vertices
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-graph-graph_name-edges}
      */
@@ -858,7 +858,7 @@ class Tigroid {
         }
         ret = this._get({url: url});
 
-        // Add reverse edge name where applicable 
+        // Add reverse edge name where applicable
         let rev = this.getReverseEdge(ret[0]["e_type"]);
         if (rev) {
         	for (let e in ret) {
@@ -871,7 +871,7 @@ class Tigroid {
 
     /**
      * Retrieves edges of the given edge type regardless the source vertex.
-     * 
+     *
      * @param {string} edgeType - The name of the edge type.
      */
     getEdgesByType(edgeType) {
@@ -924,7 +924,7 @@ class Tigroid {
         }
         ret = ret[0]["edges"];
 
-        // Add reverse edge name where applicable 
+        // Add reverse edge name where applicable
         let rev = this.getReverseEdge(ret[0]["e_type"]);
         if (rev) {
         	for (let e in ret) {
@@ -937,12 +937,12 @@ class Tigroid {
 
     /**
      * Returns edge attribute statistics.
-     * 
+     *
      * @param {strng|string[]} edgeTypes - A single edge type name or a list of edges types names or '*' for all edges types.
      * @param {boolean} skipNA - Skip those edges that do not have attributes or none of their attributes have statistics gathered.
-     * 
+     *
      * @return {sting} A JSON document with edge statistics.
-     * 
+     *
      * Endpoint:      POST /builtins
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#stat_edge_attr}
      */
@@ -982,11 +982,11 @@ class Tigroid {
     // TODO: delEges()
     /**
      * Deletes edges from the graph.
-     * 
+     *
      * Only `sourceVertexType` and `sourceVertexId` are required.
      * If `targetVertexId` is specified, then `targetVertexType` must also be specified.
      * If `targetVertexType` is specified, then `edgeType` must also be specified.
-     * 
+     *
      * Arguments:
 	 * @param {string} where - Comma separated list of conditions that are all applied on each vertex' attributes.
      *                 The conditions are in logical conjunction (i.e. they are "AND'ed" together).
@@ -998,9 +998,9 @@ class Tigroid {
      *                 See {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#sort}
      *                 Must be used with limit.
 	 * @param {number} timeout - Time allowed for successful execution (0 = no limit, default).
-     * 
+     *
      * @returns {object} An object of edge type / deleted edge count pairs.
-     * 
+     *
      * Endpoint:      DELETE /graph/{/graph_name}/edges
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#delete-graph-graph_name-edges}
      */
@@ -1009,15 +1009,15 @@ class Tigroid {
 
     /**
      * Runs an installed query.
-     * 
+     *
      * The query must be already created and installed in the graph.
      * Use `getEndpoints(dynamic=true)` or GraphStudio to find out the generated endpoint URL of the query, but only the query name needs to be specified here.
-     * 
+     *
      * Arguments:
      * @param {string} params - A string of param1=value1&param2=value2 format or an object.
 	 * @param {number} timeout - Time allowed for successful execution (0 = no limit, default).
      * @param {number} sizeLimit - Maximum size of response (in bytes).
-     * 
+     *
      * Endpoint:      POST /query/{graph_name}/<query_name>
      * Documentation: {@link https://docs.tigergraph.com/dev/gsql-ref/querying/query-operations#running-a-query}
      */
@@ -1027,17 +1027,17 @@ class Tigroid {
 
     /**
      * Runs an interpreted query.
-     * 
+     *
      * You must provide the query text in this format:
      *     INTERPRET QUERY (<params>) FOR GRAPH <graph_name> {
      *        <statements>
      *     }'
-     * 
+     *
      * Use `$graphname` in the `FOR GRAPH` clause to avoid hard-coding it; it will be replaced by the actual graph name.
-     * 
+     *
      * Arguments:
      * @param {string} params - A string of param1=value1&param2=value2 format or an object.
-     * 
+     *
      * Endpoint:      POST /gsqlserver/interpreted_query
      * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-gsqlserver-interpreted_query-run-an-interpreted-query}
      */
@@ -1051,15 +1051,15 @@ class Tigroid {
 
     /**
      * Parses query output and separates vertex and edge data (and optionally other output) for easier use.
-     * 
+     *
      * @param {object} output - The data structure returned by `runInstalledQuery()` or `runInterpretedQuery()`
      * @param {boolean} graphOnly` - Should output be restricted to vertices and edges (True, default) or should any other output (e.g. values of
      *                 variables or accumulators, or plain text printed) be captured as well.
-     * 
+     *
      * @returns An object with two (or three) keys: "Vertices", "Edges" and optionally "Output". First two refer to another object
      *      containing keys for each vertex and edge types found, and the instances of those vertex and edge types. "Output" is a list of
      *      objects containing the key/value pairs of any other output.
-     * 
+     *
      * The JSON output from a query can contain a mixture of results: vertex sets (the output of a SELECT statement),
      *      edge sets (e.g. collected in a global accumulator), printout of global and local variables and accumulators,
      *      including complex types (LIST, MAP, etc.). The type of the various output entries is not explicit, we need
@@ -1070,7 +1070,7 @@ class Tigroid {
      *      (after some transformation) to pass a subgraph to a visualisation component.
      */
     parseQueryOutput(output, graphOnly=true) {
-    	
+
     	function attCopy(src, trg) {
     		let srca = src["attributes"];
     		let trga = trg["attributes"];
@@ -1091,11 +1091,11 @@ class Tigroid {
     			obj["x_sources"] = [src];
     		}
     	}
-    	
+
         let vs = {};
         let es = {};
         let ou = [];
-        
+
         // Outermost data type is an array
         for (let o1 in output) {
         	let _o1 = output[o1];
@@ -1106,7 +1106,7 @@ class Tigroid {
 	            	for(let o3 in _o2) { // Iterate through the array
 	            		let _o3 = _o2[o3];
 	            		if (_o3.hasOwnProperty("v_type")) { // It's a vertex!
-	            			
+
 	            			// Handle vertex type first
 	                		let vType = _o3["v_type"];
 	                		let vtm;
@@ -1131,10 +1131,10 @@ class Tigroid {
 		                		addOccurrences(_o3, o2);
 		                		vtm.set(vId, _o3);
 		                	}
-		                	
+
 	            		} else if (_o3.hasOwnProperty("e_type")) { // It's an edge!
-	            			
-	            			// Handle vertex type first
+
+	            			// Handle edge type first
 	                		let eType = _o3["e_type"];
 	                		let etm;
 	                		if (es.hasOwnProperty(eType)) { // Do we have this type of edges in our list (which is an object, really)?
@@ -1145,11 +1145,11 @@ class Tigroid {
 	                			etm = new Map();
 	                			es[eType] = etm;
 	                		}
-	                		
+
 	                		// Then handle the edge itself
     	                	let eId = _o3["from_type"] + "(" + _o3["from_id"] + ")->" + _o3["to_type"] + "(" + _o3["to_id"] + ")";
     	                	_o3["e_id"] = eId;
-    	                	
+
     	                	// Add reverse edge name, if applicable
     	                	if (this.isDirected(eType)) {
     	                		let rev = this.getReverseEdge(eType);
@@ -1188,9 +1188,12 @@ class Tigroid {
         if (! graphOnly) {
             ret["Output"] = ou;
         }
+        if (this.debug) {
+        	console.log(ret);
+        }
         return ret;
     }
-    
+
     // Token management =========================================================
 
     getToken(secret, setToken = true, lifetime = null) {
@@ -1292,7 +1295,7 @@ class Tigroid {
     }
 
     // TODO: getInstalledQueries
-    
+
     getStatistics(seconds = 10, segment = 10) {
         if (! seconds || typeof seconds !== "number") {
             seconds = 10;

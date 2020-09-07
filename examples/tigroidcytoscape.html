@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tigroid test</title>
+
+    <style>
+	    #cy {
+	  		width: 1500px;
+	  		height: 900px;
+	  		display: block;
+	  		border: 1px solid #f0f0f0;
+	  		margin: 5px;
+	  		padding: 2px;
+			}
+    </style>
+</head>
+<body>
+<!--div id="tgres" style="width: 100%; border: 1px solid #f0f0f0; margin: 5px; padding: 2px; font-family: Calibri, Helvetica, Arial, sans-serif"></div-->
+<div id="cy">
+<script src="../tigroid.js"></script>
+<script src="../tigroidcytoscape.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.15.2/cytoscape.min.js"></script>
+<script>
+	conn = new Tigroid({restppPort: "8080", gsPort: "8080", graphname: "MyGraph"});
+
+	var tgres = document.getElementById('tgres');
+	var cy = cytoscape({
+	  container: document.getElementById('cy'), // container to render in
+
+		  style: [ // the stylesheet for the graph
+		    {
+		      selector: 'node',
+		      style: {
+			    'label': 'data(v_id)',
+		        'color': 'black',
+		        'text-valign': 'bottom',
+		        'font-size': '10px',
+		        'background-color': '#FFFFFF',
+		        'border-width': '1px',
+		        'border-color': '#808080'
+		      }
+		    },
+		    {
+		    	selector: '[v_type = "Country"]',
+		    	style: {
+		            'background-color': '#C6E0B4',
+		        },
+		    },
+		    {
+		    	selector: '[v_type = "Province"]',
+		    	style: {
+		            'background-color': '#FFE699',
+		        },
+		    },
+		    {
+		    	selector: '[v_type = "City"]',
+		    	style: {
+		            'background-color': '#FFEEF0',
+		        },
+		    },
+		    {
+		    	selector: '[v_missed]',
+		    	style: {
+		    		'border-style': 'dashed'
+		    	}
+		    },
+
+		    {
+		      selector: 'edge',
+		      style: {
+		        'width': 2,
+		        'line-color': '#ccc',
+		        'curve-style': 'bezier'
+		      }
+		    },
+		    {
+		    	selector: '[directed = "true"]',
+		    	style: {
+			        'target-arrow-color': '#ccc',
+			        'target-arrow-shape': 'triangle',
+		    	}
+		    }
+		  ],
+
+		  layout: {
+		    name: 'grid',
+		    rows: 1
+		  }
+
+	});
+
+	var tc = new TigroidCytoscape({cy: cy, strayEdge: true, revEdge: false});
+
+/*
+	tc.addVertices(conn.getVertices("Country"));
+	tc.addVertices(conn.getVertices("Province", null, "population<1000000"));
+	tc.addEdges(conn.getEdgesByType("PROVINCE_IN_COUNTRY"));
+*/
+	tc.addQueryOutput(conn.parseQueryOutput(conn.runInstalledQuery("getData")));
+
+	var layout = cy.layout({
+		  name: 'cose'
+		});
+
+	layout.run();
+</script>
+</div>
+</body>
+</html>
