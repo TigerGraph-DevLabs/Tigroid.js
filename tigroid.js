@@ -1,3 +1,6 @@
+/**
+ * Generic TigerGraph specific exception.
+ */
 class TigroidException {
     constructor(message, code) {
         this.message = message;
@@ -5,6 +8,9 @@ class TigroidException {
     }
 }
 
+/**
+ * Generic HTTP specific exception.
+ */
 class HttpError {
     constructor(message, code) {
         this.message = message;
@@ -16,12 +22,12 @@ class HttpError {
  * JavaScript connector for TigerGraph
  * https://www.tigergraph.com
  *
- * Common arguments used in methods:
- * vertexType, sourceVertexType, targetVertexType -- The name of a vertex type in the graph.
- *                                                   Use `getVertexTypes()` to fetch the list of vertex types currently in the graph.
- * vertexId, sourceVertexId, targetVertexId       -- The PRIMARY_ID of a vertex instance (of the appropriate data type).
- * edgeType                                       -- The name of the edge type in the graph.
- *                                                   Use `getEdgeTypes()` to fetch the list of edge types currently in the graph.
+ * Common parameters used in functions:
+ * {string} vertexType, sourceVertexType, targetVertexType -- The name of a vertex type in the graph.
+ *                                                            Use {@link getVertexTypes} to fetch the list of vertex types currently in the graph.
+ * {string} vertexId, sourceVertexId, targetVertexId       -- The PRIMARY_ID of a vertex instance (of the appropriate data type).
+ * {string} edgeType                                       -- The name of the edge type in the graph.
+ *                                                            Use {@link getEdgeTypes} to fetch the list of edge types currently in the graph.
  */
 class Tigroid {
 
@@ -164,7 +170,6 @@ class Tigroid {
      * For parameter and return details see {@link _req}.
      */
     _delete({url, authMode}) {
-    	console.log("URL: " + url);
         return this._req({method: "DELETE", url: url, authMode: authMode});
     }
 
@@ -211,6 +216,15 @@ class Tigroid {
         return this._get({url: this.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + this.graphname, authMode: "pwd"});
     }
 
+    /**
+     * Retrieves the schema (all vertex and edge type and - if not disabled - the User Defined Type details) of the graph.
+     * 
+	 * @param {boolean} udts - If `true`, calls `_getUDTs()`, i.e. includes User Defined Types in the schema details.
+	 * @param {boolean} force - If `true`, retrieves the schema details again, otherwise returns a cached copy of the schema details (if they were already fetched previously).
+     *
+     * Endpoint:      GET /gsqlserver/gsql/schema
+     * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-the-graph-schema-get-gsql-schema}
+     */
     getSchema(udts = true, force = false) {
         if (! this.schema || force) {
             this.schema = this._get({url: this.gsUrl + "/gsqlserver/gsql/schema?graph=" + this.graphname, authMode: "pwd"});
@@ -221,6 +235,9 @@ class Tigroid {
         return this.schema;
     }
 
+    /**
+     * Returns the list of User Defined Types (names only).
+     */
     getUDTs() {
         let ret = [];
         let udts = this._getUDTs();
@@ -230,6 +247,9 @@ class Tigroid {
         return ret;
     }
 
+    /**
+     * Returns the details of a specific User Defined Type.
+     */
     getUDT(udtName) {
         let udts = this._getUDTs();
         for (let udt in udts) {
@@ -240,6 +260,12 @@ class Tigroid {
         return [];  // UDT was not found
     }
 
+    /**
+     * Upserts data (vertices and edges) from a JSON document or equivalent object structure.
+     * 
+     * Endpoint:      POST /graph
+     * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-the-graph-schema-get-gsql-schema}
+     */
     upsertData(data) {
         if (typeof data !== "string") {
             data = JSON.stringify(data);
@@ -249,6 +275,11 @@ class Tigroid {
 
     // Vertex related functions =================================================
 
+    /**
+     * Returns the list of vertex type names of the graph.
+     * 
+	 * @param {boolean} force - If `true`, forces the retrieval the schema details again, otherwise returns a cached copy of vertex type details (if they were already fetched previously).
+     */
     getVertexTypes(force = false) {
         let ret = [];
         let vts = this.getSchema(true, force)["VertexTypes"];
@@ -258,6 +289,11 @@ class Tigroid {
         return ret;
     }
 
+    /**
+     * Returns the details of the specified vertex type.
+     * 
+	 * @param {boolean} force - If `true`, forces the retrieval the schema details again, otherwise returns a cached copy of vertex type details (if they were already fetched previously).
+     */
     getVertexType(vertexType, force = false) {
         let vts = this.getSchema(true, force)["VertexTypes"];
         for (let vt in vts) {
@@ -268,6 +304,24 @@ class Tigroid {
         return {}
     }
 
+    /**
+     * Returns the number of vertices.
+     * 
+     *  Uses:
+     *  - If `vertexType` is "*": vertex count of all vertex types (`where` cannot be specified in this case)
+     *  - If `vertexType` is specified only: vertex count of the given type
+     *  - If `vertexType` and `where` are specified: vertex count of the given type after filtered by `where` condition(s)
+     *
+     *  For valid values of `where` condition, see {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#filter}
+     *
+     *  Returns a dictionary of <vertex_type>: <vertex_count> pairs.
+     *
+     *  Endpoint:      GET /graph/{graph_name}/vertices
+     *  Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-graph-graph_name-vertices}
+     *  Endpoint:      POST /builtins
+     *  Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#stat_vertex_number}
+     * 
+     */
     getVertexCount(vertexType, where = "") {
         let res;
         // If WHERE condition is not specified, use /builtins else user /vertices
@@ -290,6 +344,26 @@ class Tigroid {
         return ret;
     }
 
+    /**
+     * Upserts a vertex.
+     * 
+     *  Data is upserted:
+     *  - If vertex is not yet present in graph, it will be created.
+     *  - If it's already in the graph, its attributes are updated with the values specified in the request. An optional operator controls how the attributes are updated.
+     *
+     *  The `attributes` argument is expected to be an object in this format:
+     *      {<attribute_name>: <attribute_value>|(<attribute_name>, <operator>), …}
+     *
+     *  Example:
+     *      {"name": "Thorin", points: (10, "+"), "bestScore": (67, "max")}
+     *
+     *  For valid values of <operator> see: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data}
+     *
+     *  Returns a single number of accepted (successfully upserted) vertices (0 or 1).
+     *
+     *  Endpoint:      POST /graph
+     *  Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data}
+     */
     upsertVertex(vertexType, vertexId, attributes = null) {
         if ( typeof attributes !== "object") {
             return null;
@@ -299,10 +373,34 @@ class Tigroid {
         v[vertexId] = vals;
         let vt = {};
         vt[vertexType] = v;
-        let data = JSON.stringify({vertices: vt})
+        let data = JSON.stringify({"vertices": vt})
         return this._post({url: this.restppUrl + "/graph/" + this.graphname, data: data})[0]["accepted_vertices"];
     }
 
+    /**
+     * Upserts multiple vertices (of the same type).
+     * 
+     * See the description of {@link upsertVertex} for generic information.
+     * 
+     * The `vertices` argument is expected to be a list of tuples in this format:
+     *      [
+     *          (<vertex_id>, {<attribute_name>, <attribute_value>|[<attribute_name>, <operator>], …}),
+     *          ⋮
+     *      ]
+     *
+     *  Example:
+     *      [
+     *         (2, {"name": "Balin", "points": [10, "+"], "bestScore": (67, "max")}),
+     *         (3, {"name": "Dwalin", "points": [7, "+"], "bestScore": (35, "max")})
+     *      ]
+     *
+     *  For valid values of <operator> see: https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data
+     *
+        Returns a single number of accepted (successfully upserted) vertices (0 or positive integer).
+
+        Endpoint:      POST /graph
+        Documentation: https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#post-graph-graph_name-upsert-the-given-data
+     */
     upsertVertices(vertexType, vertices) {
         if (! Array.isArray(vertices)) {
             return null;
@@ -1053,11 +1151,11 @@ class Tigroid {
      * Parses query output and separates vertex and edge data (and optionally other output) for easier use.
      *
      * @param {object} output - The data structure returned by `runInstalledQuery()` or `runInterpretedQuery()`
-     * @param {boolean} graphOnly` - Should output be restricted to vertices and edges (True, default) or should any other output (e.g. values of
+     * @param {boolean} graphOnly` - Should output be restricted to vertices and edges (true, default) or should any other output (e.g. values of
      *                 variables or accumulators, or plain text printed) be captured as well.
      *
      * @returns An object with two (or three) keys: "Vertices", "Edges" and optionally "Output". First two refer to another object
-     *      containing keys for each vertex and edge types found, and the instances of those vertex and edge types. "Output" is a list of
+     *      containing keys for each vertex and edge types found, and the instances of those vertex and edge types. "Output" is an array of
      *      objects containing the key/value pairs of any other output.
      *
      * The JSON output from a query can contain a mixture of results: vertex sets (the output of a SELECT statement),
@@ -1196,6 +1294,25 @@ class Tigroid {
 
     // Token management =========================================================
 
+    /**
+     * Requests an authorization token.
+     * 
+     * This function returns a token only if REST++ authentication is enabled. If not, an exception will be raised.
+     * See: {@link https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#rest-authentication}
+     * 
+	 * @param {string} secret - The secret (string) generated in GSQL using `CREATE SECRET`.
+     *                 See {@link https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#create-show-drop-secret}
+	 * @param {string} setToken - Set the connection's API token to the new value (default: true).
+	 * @param {number} lifetime - Duration of token validity (in secs, default 30 days = 2,592,000 secs).
+     *
+     * @returns An object of (<new_token>, <exporation_timestamp_unixtime>, <expiration_timestamp_ISO8601>).
+     *          Return value can be ignored 
+     *          
+     * Note: expiration timestamp's time zone might be different from your computer's local time zone.
+     * 
+     * Endpoint:      GET /requesttoken
+     * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/restpp-requests#requesting-a-token-with-get-requesttoken}
+     */
     getToken(secret, setToken = true, lifetime = null) {
         this.xhr.open("GET", this.restppUrl + "/requesttoken?secret=" + secret + (lifetime ? "&lifetime=" + lifetime.toString() : ""), false);
         this.xhr.send();
@@ -1213,6 +1330,24 @@ class Tigroid {
         throw new TigroidException(res["message"], "code" in res ? res["code"] : null);
     }
 
+    /**
+     * Extends a token's lifetime.
+     * 
+     * This function works only if REST++ authentication is enabled. If not, an exception will be raised.
+     * See: {@link https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#rest-authentication}
+     * 
+	 * @param {string} secret - The secret (string) generated in GSQL using `CREATE SECRET`.
+     *                 See {@link https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#create-show-drop-secret}
+	 * @param {string} token - The token requested earlier. If not specified, refreshes current connection's token.
+	 * @param {number} lifetime - Duration of token validity (in secs, default 30 days = 2,592,000 secs) from current system timestamp.
+     * 
+     * Note:
+     *  - New expiration timestamp will be `now + lifetime` seconds, not `current expiration timestamp + lifetime` seconds.
+     *  - Expiration timestamp's time zone might be different from your computer's local time zone.
+     *  
+     *  Endpoint:      PUT /requesttoken
+     *  Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/restpp-requests#refreshing-tokens}
+     */
     refreshToken(secret, token = null, lifetime = 2592000) {
         if (! token) {
             token = this.apiToken;
@@ -1230,6 +1365,22 @@ class Tigroid {
         throw new TigroidException(res["message"], "code" in res ? res["code"] : null);
     }
 
+    /**
+     * Deletes a token.
+     * 
+     * This function works only if REST++ authentication is enabled. If not, an exception will be raised.
+     * See: {@link https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#rest-authentication}
+     * 
+	 * @param {string} secret - The secret (string) generated in GSQL using `CREATE SECRET`.
+                       See {@link https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#create-show-drop-secret}
+	 * @param {string} token - The token requested earlier. If not specified, deletes current connection's token, so be careful.
+	 * @param {boolean} skipNA - Don't raise exception if specified token does not exist.
+	 *
+	 * @returns `true` if deletion was successful or token did not exist but `skipNA` was `true`; raises exception otherwise.
+	 * 
+	 * Endpoint:      DELETE /requesttoken
+	 * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/restpp-requests#deleting-tokens}
+     */
     deleteToken(secret, token = null, skipNA = true) {
         if (! token) {
             token = this.apiToken;
@@ -1251,10 +1402,30 @@ class Tigroid {
 
     // Other functions ==========================================================
 
+    /**
+     * Pings the database.
+     * 
+     * Expected return value is "Hello GSQL"
+     * 
+     * Endpoint:      GET /echo  and  POST /echo
+     * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-echo-and-post-echo}
+     */
     echo() {
         return this._get({url: this.restppUrl + "/echo/" + this.graphname, resKey: "message"});
     }
 
+    /**
+     * Lists the REST++ endpoints and their parameters.
+     * 
+	 * @param {boolean} builtin - List TigerGraph provided REST++ endpoints.
+	 * @param {boolean} dymamic - List endpoints generated for user installed queries.
+	 * @param {boolean} static - List static endpoints.
+	 * 
+	 * If none of the above arguments are specified, all endpoints are listed
+     *
+     *  Endpoint:      GET /endpoints
+     *  Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-endpoints}
+     */
     getEndpoints(builtins = false, dynamics = false, statics = false) {
         let ret = {};
         let bui, dyn, sta;
@@ -1294,8 +1465,24 @@ class Tigroid {
         return ret;
     }
 
-    // TODO: getInstalledQueries
+    /**
+     * Returns installed queries.
+     */
+    getInstalledQueries() {
+        return self.getEndpoints(dynamic=true);
+    }
 
+    /**
+     * Retrieves real-time query performance statistics over the given time period.
+     * 
+	 * @param {number} seconds - The duration of statistic collection period (the last n seconds before the function call).
+	 * @param {string} segments - The number of segments of the latency distribution (shown in results as LatencyPercentile).
+     *                 By default, segments is 10, meaning the percentile range 0-100% will be divided into ten equal segments: 0%-10%, 11%-20%, etc.
+     *                 Segments must be [1, 100].
+     *
+     *  Endpoint:      GET /statistics
+     *  Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-statistics}
+     */
     getStatistics(seconds = 10, segment = 10) {
         if (! seconds || typeof seconds !== "number") {
             seconds = 10;
@@ -1310,6 +1497,12 @@ class Tigroid {
         return this._get({url: this.restppUrl + "/statistics/" + this.graphname + "?seconds=" + seconds.toString() + "&segment=" + segment.toString(), resKey: null});
     }
 
+    /** 
+     * Retrieves the git versions of all components of the system.
+     * 
+     * Endpoint:      GET /version
+     * Documentation: {@link https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-version}
+     */
     getVersion() {
         this.xhr.open("GET", this.restppUrl + "/version/" + this.graphname, false);
         // TODO: this.xhr.setRequestHeader("Authorization", "Bearer " + this.apiToken);
@@ -1325,6 +1518,13 @@ class Tigroid {
         return components;
     }
 
+    /**
+     * Gets the version information of specific component.
+     * 
+     * @param {string} component - One of TigerGraph's components (e.g. product, gpe, gse).
+     * 
+     * Get the full list of components using {@link getVersion}.
+     */
     getVer(component = "product", full = false) {
         let ret = "";
         let components = this.getVersion();
@@ -1344,6 +1544,11 @@ class Tigroid {
         }
     }
 
+    /**
+     * Returns the expiration date and remaining days of the license.
+     * 
+     * In case of evaluation/trial deployment, an information message and -1 remaining days are returned.
+     */
     getLicenseInfo() {
         let res = this._get({url: this.restppUrl + "/showlicenseinfo", resKey: null, skipCheck: true});
         let ret = {};
@@ -1362,6 +1567,18 @@ class Tigroid {
 
     // ==========================================================================
 
+    /**
+     * Initiate a TigerGraph connection object.
+     * 
+	 * @param {string} host - The ip address of the TigerGraph server.
+	 * @param {string} graphname - The default graph for running queries.
+	 * @param {string} username - The username on the TigerGraph server.
+	 * @param {string} password - The password for that user.
+	 * @param {string} restppPort - The port for REST++ queries.
+	 * @param {string} gsPort - The port of all other queries.
+	 * @param {string} apiToken - A token to use when making queries.
+	 * @param {boolean} debug - Enable debug output.
+     */
     constructor({host = "http://localhost", graphname = "MyGraph", username = "tigergraph", password = "tigergraph", restppPort = "9000", gsPort = "14240", apiToken = "", debug = false}) {
         this.host       = host;
         this.graphname  = graphname;
